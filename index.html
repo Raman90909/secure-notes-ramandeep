@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ramandeep's Secure Notes App</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .tab {
+      display: none;
+    }
+    .active {
+      display: block;
+    }
+    button.tab-btn {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Welcome to Ramandeep's Secure Notes App</h1>
+  
+  <div>
+    <button class="tab-btn" onclick="showTab('registerTab')">Register</button>
+    <button class="tab-btn" onclick="showTab('loginTab')">Login</button>
+    <button class="tab-btn" onclick="showTab('notesTab')">Notes</button>
+  </div>
+
+  <div id="registerTab" class="tab active">
+    <h2>Register</h2>
+    <form id="registerForm">
+      <input type="text" placeholder="Username" id="regUsername"><br>
+      <input type="password" placeholder="Password" id="regPassword"><br>
+      <button type="submit">Register</button>
+    </form>
+  </div>
+
+  <div id="loginTab" class="tab">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input type="text" placeholder="Username" id="loginUsername"><br>
+      <input type="password" placeholder="Password" id="loginPassword"><br>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <div id="notesTab" class="tab">
+    <h2>My Notes</h2>
+    <form id="noteForm">
+      <textarea id="noteContent" placeholder="Write a note..."></textarea><br>
+      <button type="submit">Add Note</button>
+    </form>
+    <ul id="notesList"></ul>
+  </div>
+
+  <script>
+    function showTab(tabId) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    document.getElementById('registerForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      const res = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      alert(data.message);
+    };
+
+    document.getElementById('loginForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        alert('Logged in!');
+      } else {
+        alert(data.error);
+      }
+    };
+
+    document.getElementById('noteForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const content = document.getElementById('noteContent').value;
+      await fetch('/notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ content })
+      });
+      document.getElementById('noteContent').value = '';
+      fetchNotes();
+    };
+
+    async function fetchNotes() {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/notes', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const notes = await res.json();
+      const list = document.getElementById('notesList');
+      list.innerHTML = '';
+      notes.forEach(n => {
+        const li = document.createElement('li');
+        li.textContent = n.content;
+        list.appendChild(li);
+      });
+    }
+
+    // Automatically load notes tab when opened (if logged in)
+    if (localStorage.getItem('token')) {
+      fetchNotes();
+    }
+  </script>
+</body>
+</html>
